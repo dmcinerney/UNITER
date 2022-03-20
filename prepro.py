@@ -53,6 +53,27 @@ def process_nlvr2(jsonl, db, tokenizer, missing=None):
     return id2len, txt2img
 
 
+def process_imagenome(directory, db, tokenizer):
+    id2len = {}
+    txt2img = {}  # not sure if useful
+    files = sorted(os.listdir(directory))
+    for fname in tqdm(files, desc='processing imagenome', total=len(files)):
+        with open(os.path.join(directory, fname), 'r') as f:
+            example = json.load(f)
+        id_ = example['identifier']
+        img_id = id_.split('_')[0]
+        img_fname = f'imagenome_fea_{img_id}.npz'
+        input_ids = tokenizer(example['sentence'])
+        target = None
+        txt2img[id_] = img_fname
+        id2len[id_] = len(input_ids)
+        example['input_ids'] = input_ids
+        example['img_fname'] = img_fname
+        example['target'] = target
+        db[id_] = example
+    return id2len, txt2img
+
+
 def process_referring_expressions(refs, instances, iid_to_ann_ids,
                                   db, tokenizer, split):
     """
@@ -120,6 +141,7 @@ def main(opts):
                          'for re-processing')
     meta = vars(opts)
     meta['tokenizer'] = opts.toker
+    meta['bert'] = opts.toker
     toker = BertTokenizer.from_pretrained(
         opts.toker, do_lower_case='uncased' in opts.toker)
     tokenizer = bert_tokenize(toker)
@@ -143,6 +165,8 @@ def main(opts):
                     missing_imgs = None
                 jsons = process_nlvr2(
                     ann, db, tokenizer, missing_imgs)
+        elif opts.task == 'imagenome':
+            jsons = process_imagenome(opts.annotations[0], db, tokenizer)
         elif opts.task == 're':
             data = pickle.load(open(opts.annotations[0], 'rb'))
             instances = json.load(open(opts.annotations[1], 'r'))
@@ -171,11 +195,11 @@ if __name__ == '__main__':
     parser.add_argument('--output', required=True,
                         help='output dir of DB')
     parser.add_argument('--task', required=True, default='nlvr',
-                        choices=['nlvr', 're'])
+                        choices=['nlvr', 're', 'imagenome'])
     parser.add_argument('--toker', default='bert-base-cased',
                         help='which BERT tokenizer to used')
     args = parser.parse_args()
-    if args.task == 'nlvr':
+    if args.task == 'nlvr' or args.task == 'imagenome':
         assert len(args.annotations) == 1
     elif args.task == 're':
         assert len(args.annotations) == 3
