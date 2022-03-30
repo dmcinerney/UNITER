@@ -89,6 +89,7 @@ class BertSelfAttention(nn.Module):
 
         # Normalize the attention scores to probabilities.
         attention_probs = nn.Softmax(dim=-1)(attention_scores)
+        attention_probs_before_dropout = attention_probs
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -98,7 +99,7 @@ class BertSelfAttention(nn.Module):
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
-        return context_layer
+        return context_layer, attention_probs_before_dropout
 
 
 class BertSelfOutput(nn.Module):
@@ -122,9 +123,9 @@ class BertAttention(nn.Module):
         self.output = BertSelfOutput(config)
 
     def forward(self, input_tensor, attention_mask):
-        self_output = self.self(input_tensor, attention_mask)
+        self_output, attention_probs = self.self(input_tensor, attention_mask)
         attention_output = self.output(self_output, input_tensor)
-        return attention_output
+        return attention_output, attention_probs
 
 
 class BertIntermediate(nn.Module):
@@ -164,10 +165,10 @@ class BertLayer(nn.Module):
         self.output = BertOutput(config)
 
     def forward(self, hidden_states, attention_mask):
-        attention_output = self.attention(hidden_states, attention_mask)
+        attention_output, attention_probs = self.attention(hidden_states, attention_mask)
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
-        return layer_output
+        return layer_output, attention_probs
 
 
 class BertPooler(nn.Module):

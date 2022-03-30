@@ -12,9 +12,10 @@
 module load singularity
 #ANN_DIR=$2
 #OUT_DIR=$1
+DATA_TYPE=gensentswapcond
 PATH_TO_STORAGE=/scratch/mcinerney.de/uniter_data
-ANN_DIR=$PATH_TO_STORAGE/imagenome/normal_text
-OUT_DIR=$PATH_TO_STORAGE/txt_db/imagenome_normal
+ANN_DIR=$PATH_TO_STORAGE/imagenome/${DATA_TYPE}_text
+OUT_DIR=$PATH_TO_STORAGE/txt_db/imagenome_${DATA_TYPE}
 
 set -e
 
@@ -23,7 +24,7 @@ if [ ! -d $OUT_DIR ]; then
 fi
 
 #for SPLIT in 'test' 'val' 'train'; do
-for SPLIT in 'val'; do
+for SPLIT in 'test'; do
     echo "preprocessing ${SPLIT} annotations..."
     singularity exec --ipc \
         --bind $(pwd):/src \

@@ -12,9 +12,10 @@
 module load singularity
 #IMG_NPY=$1
 #OUT_DIR=$2
+DATA_TYPE=gensentswapcond
 PATH_TO_STORAGE=/scratch/mcinerney.de/uniter_data
-IMG_NPY=$PATH_TO_STORAGE/imagenome/normal_npz/val
-OUT_DIR=$PATH_TO_STORAGE/img_db/imagenome_normal
+IMG_NPY=$PATH_TO_STORAGE/imagenome/${DATA_TYPE}_npz/test
+OUT_DIR=$PATH_TO_STORAGE/img_db/imagenome_${DATA_TYPE}
 
 set -e
 

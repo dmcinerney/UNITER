@@ -280,16 +280,22 @@ class UniterEncoder(nn.Module):
                                     for _ in range(config.num_hidden_layers)])
 
     def forward(self, input_, attention_mask,
-                output_all_encoded_layers=True):
+                output_all_encoded_layers=True, output_attention=False):
         all_encoder_layers = []
+        all_attention_probs = []
         hidden_states = input_
         for layer_module in self.layer:
-            hidden_states = layer_module(hidden_states, attention_mask)
+            hidden_states, attention_probs = layer_module(hidden_states, attention_mask)
             if output_all_encoded_layers:
                 all_encoder_layers.append(hidden_states)
+                all_attention_probs.append(attention_probs)
         if not output_all_encoded_layers:
             all_encoder_layers.append(hidden_states)
-        return all_encoder_layers
+            all_attention_probs.append(attention_probs)
+        if output_attention:
+            return all_encoder_layers, all_attention_probs
+        else:
+            return all_encoder_layers
 
 
 class UniterModel(UniterPreTrainedModel):
@@ -337,6 +343,7 @@ class UniterModel(UniterPreTrainedModel):
                 img_feat, img_pos_feat,
                 attention_mask, gather_index=None, img_masks=None,
                 output_all_encoded_layers=True,
+                output_attention=False,
                 txt_type_ids=None, img_type_ids=None):
         # compute self-attention mask
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
@@ -359,9 +366,14 @@ class UniterModel(UniterPreTrainedModel):
                 img_feat, img_pos_feat,
                 gather_index, img_masks, txt_type_ids, img_type_ids)
 
-        encoded_layers = self.encoder(
+        encoded_layers, attention_probs = self.encoder(
             embedding_output, extended_attention_mask,
-            output_all_encoded_layers=output_all_encoded_layers)
+            output_all_encoded_layers=output_all_encoded_layers,
+            output_attention=True)
         if not output_all_encoded_layers:
             encoded_layers = encoded_layers[-1]
-        return encoded_layers
+            attention_probs = attention_probs[-1]
+        if output_attention:
+            return encoded_layers, attention_probs
+        else:
+            return encoded_layers
